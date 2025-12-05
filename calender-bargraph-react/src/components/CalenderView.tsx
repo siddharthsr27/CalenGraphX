@@ -1,79 +1,86 @@
-import React, { useState } from "react";
-import {
-  Calendar,
-  dateFnsLocalizer
-} from "react-big-calendar";
-
-import { format, parse, startOfWeek, getDay } from "date-fns";
-import { useSelector, useDispatch } from "react-redux";
-import { setSelectedDate } from "../store/dataSlice";
-import DateDetailModal from "./DateDetailModel";
-
+import React, { useMemo, useState } from "react";
+import {Calendar, dateFnsLocalizer, Views,} from "react-big-calendar";
+import { parse, format, startOfWeek, getDay } from "date-fns";
+import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import "../styles.css";
+import rawDummyData from "../data/dummy_data.json";
+import { DateDataMap } from "../types/DataTypes";
+import DateDetailModel from "./DateDetailModel";
 
-type CellProps = {
-  value: Date;
-  children: React.ReactNode;
-};
-
+const dummyData = rawDummyData as DateDataMap;
+const locales = { "en-US": enUS };
 const localizer = dateFnsLocalizer({
   format,
   parse,
   startOfWeek,
   getDay,
-  locales: {}
+  locales,
 });
 
-function dateKey(date: Date) {
-  return format(date, "dd-MM-yyyy");
+type EventItem = {
+  title: string;
+  start: Date;
+  end: Date;
+  allDay: boolean;
+  key: string;
+};
+
+function parseKey(key: string): Date {
+  return parse(key, "dd-MM-yyyy", new Date());
 }
 
-const CalendarView = () => {
-  const dispatch = useDispatch();
-  const { events, raw } = useSelector((state: any) => state);
-  const [open, setOpen] = useState(false);
+export default function CalendarView() {
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  function openModal(date: Date) {
-    dispatch(setSelectedDate(date));
-    setOpen(true);
-  }
+  const events: EventItem[] = useMemo(() => {
+    return Object.keys(dummyData).map((key) => ({
+      title: `Data (${dummyData[key].length})`,
+      start: parseKey(key),
+      end: parseKey(key),
+      allDay: true,
+      key,
+    }));
+  }, []);
 
-  const dateCellWrapper = ({ value, children }: CellProps) => {
-    const key = dateKey(value);
-    const hasData = raw[key];
+  const dayPropGetter = (date: Date) => {
+    const key = format(date, "dd-MM-yyyy");
+    const hasData = dummyData[key] !== undefined;
 
-    return (
-      <div
-        style={{
-          padding: 4,
-          backgroundColor: hasData ? "#dff0ff" : "transparent",
-          borderRadius: 4,
-          cursor: "pointer"
-        }}
-        onClick={() => openModal(value)}
-      >
-        {children}
-      </div>
-    );
+    return {
+      className: hasData ? "has-data" : "",
+    };
+  };
+
+  const handleSelectSlot = ({ start }: { start: Date }) => {
+    const key = format(start, "dd-MM-yyyy");
+    setSelectedKey(key);
+    setModalOpen(true);
+  };
+
+  const handleSelectEvent = (event: EventItem) => {
+    setSelectedKey(event.key);
+    setModalOpen(true);
   };
 
   return (
-    <>
+  <>
       <Calendar
         localizer={localizer}
         events={events}
+        views={[Views.MONTH, Views.WEEK, Views.DAY]}
         selectable
-        startAccessor="start"
-        endAccessor="end"
-        onSelectEvent={(event: any) => openModal(event.start)}
-        onSelectSlot={(slot: any) => openModal(slot.start)} 
-        components={{ dateCellWrapper }}
-        style={{ height: 600, marginTop: 20 }}
-      />
+        onSelectSlot={handleSelectSlot}
+        onSelectEvent={handleSelectEvent}
+        dayPropGetter={dayPropGetter}
+        style={{ height: "80vh" }}/>
 
-      <DateDetailModal open={open} onClose={() => setOpen(false)} />
+      <DateDetailModel
+        isOpen={modalOpen}
+        onRequestClose={() => setModalOpen(false)}
+        dateKey={selectedKey}
+        rawData={dummyData}/>
     </>
   );
-};
-
-export default CalendarView;
+}

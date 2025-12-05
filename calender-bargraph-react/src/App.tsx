@@ -1,13 +1,19 @@
 import React from "react";
 import CalendarView from "./components/CalenderView";
 
-const App = () => {
+export default function App() {
   return (
-    <div className="app-container">
-      <h1>React Big Calendar + Bar Graph</h1>
+    <div style={{ padding: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <img
+          src="/calengraphx.png"
+          alt="CalenGraphX Logo"
+          style={{ width: 80, height: 80 }}
+        />
+        <h1><u>CalenGraphX</u></h1>
+      </div>
+
       <CalendarView />
     </div>
   );
-};
-
-export default App;
+}

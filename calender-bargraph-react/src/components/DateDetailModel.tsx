@@ -1,58 +1,56 @@
-import React from "react";
+import React, { useMemo } from "react";
 import Modal from "react-modal";
-import { useSelector } from "react-redux";
-import { format } from "date-fns";
-
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer
-} from "recharts";
+import {BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,} from "recharts";
+import { parse, format } from "date-fns";
+import { DateDataMap } from "../types/DataTypes";
 
 Modal.setAppElement("#root");
 
-const DateDetailModal = ({ open, onClose }: any) => {
-  const { raw, selectedDate } = useSelector((state: any) => state);
-
-  if (!selectedDate) return null;
-
-  const key = format(selectedDate, "dd-MM-yyyy");
-  const data = raw[key];
-
-  const chartData = data
-    ? data.map((item: any) => {
-        const user = Object.keys(item)[0];
-        return { name: user, value: item[user] };
-      })
-    : [];
-
-  return (
-    <Modal isOpen={open} onRequestClose={onClose}>
-      <h2>Data for {key}</h2>
-
-      {data ? (
-        <div style={{ width: "100%", height: 300 }}>
-          <ResponsiveContainer>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#007bff" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      ) : (
-        <p>No data found for {key}</p>
-      )}
-
-      <button onClick={onClose}>Close</button>
-    </Modal>
-  );
+type Props = {
+  isOpen: boolean;
+  onRequestClose: () => void;
+  dateKey: string | null;
+  rawData: DateDataMap;
 };
 
-export default DateDetailModal;
+export default function DateDetailModel({
+  isOpen,
+  onRequestClose,
+  dateKey,
+  rawData,
+}: Props) {
+  const dataForDate = dateKey ? rawData[dateKey] : null;
+
+  const chartData = useMemo(() => {
+    if (!dataForDate) return [];
+    return dataForDate.map((entry) => {
+      const key = Object.keys(entry)[0];
+      return { name: key, value: entry[key] };
+    });
+  }, [dataForDate]);
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onRequestClose={onRequestClose}
+      overlayClassName="modal-overlay"
+      className="modal-content">
+      <h3>{dateKey ? format(parse(dateKey, "dd-MM-yyyy", new Date()), "do MMM yyyy") : ""}</h3>
+
+      {!dataForDate || dataForDate.length === 0 ? (
+        <div>No data found for {dateKey}</div>
+      ) : (
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData}>
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="value" />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+
+      <button onClick={onRequestClose}>Close</button>
+    </Modal>
+  );
+}
